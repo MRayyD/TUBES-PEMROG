@@ -88,11 +88,6 @@ def delete_note(note_id):
         db.session.commit()
     return redirect(url_for('index'))
 
-@app.route('/notebooks')
-@login_required
-def notebooks():
-    notebooks = Notebook.query.filter_by(user_id=current_user.id).all()
-    return render_template('view_notebooks.html', notebooks=notebooks)
 
 @app.route('/notebook/<int:notebook_id>', methods=['GET', 'POST'])
 @login_required
@@ -110,18 +105,6 @@ def notebook(notebook_id):
 
     return render_template('notebook.html', notebook=notebook)
 
-@app.route('/create_notebook', methods=['POST'])
-@login_required
-def create_notebook():
-    if request.method == 'POST':
-        title = request.form['title']
-        new_notebook = Notebook(title=title, user_id=current_user.id)
-        db.session.add(new_notebook)
-        db.session.commit()
-        flash('Notebook created successfully!')
-        return redirect(url_for('notebooks'))
-
-    return render_template('create_notebook.html')  # Render the form for creating a notebook
 
 @app.route('/delete_notebook/<int:notebook_id>')
 @login_required

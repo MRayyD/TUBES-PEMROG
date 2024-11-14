@@ -3,26 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>{{ notebook.title }}</title>
     <style>
+        #canvas-container {
+            height: 300px; /* Set a fixed height for the container */
+            overflow: auto; /* Enable scrolling if content exceeds height */
+            border: 1px solid #000; /* Optional: Add a border around the container */
+        }
+
         #canvas {
             border: 1px solid #000;
             cursor: crosshair;
+            touch-action: none; /* Prevent default touch actions */
+            width: 100%; /* Make canvas width 100% of the parent */
+            height: 100%; /* Set height to 100% of the container */
         }
+
         textarea, canvas, button {
             margin-top: 10px;
         }
     </style>
 </head>
 <body>
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('logout') }}">Logout</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+    </nav>
     <h1>{{ notebook.title }}</h1>
 
     <!-- Form to Add a Note with Text and Doodle -->
-    <form action="/add_note_to_notebook/{{ notebook.id }}" method="POST" onsubmit="saveDoodle()">
+    <form action="/add_note_to_notebook/{{ notebook.id }}" method="POST" onsubmit="return saveDoodle()">
         <textarea name="note" placeholder="Write your note for this notebook..." required></textarea>
         
         <h3>Doodle Area</h3>
-        <canvas id="canvas" width="400" height="400"></canvas>
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
         <input type="hidden" name="doodle" id="doodleInput">
         
         <button type="submit">Add Note with Doodle</button>
@@ -40,45 +62,101 @@
         {% endfor %}
     </ul>
 
-    <form action="/notebooks" method="GET">
+    <a href="/">
         <button type="submit">Back to Notebooks</button>
-    </form>
+    </a>
 
     <!-- JavaScript for Drawing on Canvas -->
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
-
-        canvas.addEventListener('mousedown', () => drawing = true);
+        let lastX = 0;
+        let lastY = 0;
+    
+        // Fill the canvas with a white background
+        function fillCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    
+        // Call fillCanvas to set the initial background
+        fillCanvas();
+    
+        // Start drawing
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+    
+        // Stop drawing
         canvas.addEventListener('mouseup', () => {
             drawing = false;
-            ctx.beginPath(); // Reset path to prevent continuous lines
+            ctx.beginPath(); // Reset the path
         });
-        canvas.addEventListener('mousemove', draw);
-
-        function draw(event) {
+    
+        // Draw on the canvas
+        canvas.addEventListener('mousemove', (e) => {
             if (!drawing) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-
+            ctx.strokeStyle = 'black';
             ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#000';
-
-            ctx.lineTo(x, y);
-            ctx.stroke();
+            ctx.lineJoin = 'round';
             ctx.beginPath();
-            ctx.moveTo(x, y);
-        }
-
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.closePath();
+            ctx.stroke();
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+    
+        // Handle touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            lastX = touch.clientX - canvas.getBoundingClientRect().left;
+            lastY = touch.clientY - canvas.getBoundingClientRect().top;
+            drawing = true;
+        });
+    
+        canvas.addEventListener('touchmove', (e) => {
+            if (!drawing) return;
+            e.preventDefault(); // Prevent scrolling
+            const touch = e.touches[0];
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
+            ctx.closePath();
+            ctx.stroke();
+            lastX = touch.clientX - canvas.getBoundingClientRect().left;
+            lastY = touch.clientY - canvas.getBoundingClientRect().top;
+        });
+    
+        canvas.addEventListener('touchend', () => {
+            drawing = false;
+            ctx.beginPath(); // Reset the path
+        });
+    
+        // Save doodle as image
         function saveDoodle() {
-            // Convert canvas to Base64 image and set it in the hidden input
-            const doodleData = canvas.toDataURL('image/png');
-            document.getElementById('doodleInput').value = doodleData;
+            const doodleInput = document.getElementById('doodleInput');
+            doodleInput.value = canvas.toDataURL(); // Save canvas content as base64 image 
+            return true; // Allow form submission
         }
+    
+        // Resize canvas to fit the width of the screen
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth; // Set canvas width to its client width
+            canvas.height = 300; // Set a fixed height
+        }
+    
+        // Resize canvas on window load and resize
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
     </script>
 </body>
 </html>
