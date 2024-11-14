@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ notebook.title }}</title>
+    <style>
+        #editor {
+            border: 1px solid #ccc;
+            width: 100%;
+            height: 400px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ notebook.title }}</h1>
+    <form action="{{ url_for('notebook', notebook_id=notebook.id) }}" method="POST">
+        <textarea id="editor" name="content">{{ notebook.content }}</textarea>
+        <button type="submit">Save</button>
+    </form>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+
+    <h2>Add a Note</h2>
+    <form action="{{ url_for('add_note', notebook_id=notebook.id) }}" method="POST">
+        <input type="text" name="note" placeholder="Enter your note" required>
+        <button type="submit">Add Note</button>
+    </form>
+
+    <h2>Notes</h2>
+    <ul>
+        {% for note in notebook.notes %}
+            <li>{{ note.content }} <a href="{{ url_for('delete_note', note_id=note.id) }}">Delete</a></li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        let undoStack = [];
+        let redoStack = [];
+
+        const editor = document.getElementById('editor');
+
+        editor.addEventListener('input', function() {
+            undoStack.push(editor.value);
+            redoStack = []; // Clear redo stack on new input
+        });
+
+        document.getElementById('undo').addEventListener('click', function() {
+            if (undoStack.length > 1) {
+                redoStack.push(undoStack.pop()); // Remove the last state
+                editor.value = undoStack[undoStack.length - 1]; // Set to the previous state
+            }
+        });
+
+        document.getElementById('redo').addEventListener('click', function() {
+            if (redoStack.length > 0) {
+                const redoValue = redoStack.pop();
+                undoStack.push(redoValue); // Push the redo value back to undo stack
+                editor.value = redoValue; // Set the editor to the redo value
+            }
+        });
+    </script>
+</body>
+</html>
