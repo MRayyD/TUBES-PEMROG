@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,7 +16,6 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
 
-
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(500), nullable=False)
@@ -28,7 +27,6 @@ class Notebook(db.Model):
     content = db.Column(db.Text, nullable=True)  # Store the content as text
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -37,7 +35,8 @@ def load_user(user_id):
 @login_required
 def index():
     notes = Note.query.filter_by(user_id=current_user.id).all()
-    return render_template('notes.html', notes=notes)
+    notebooks = Notebook.query.filter_by(user_id=current_user.id).all()
+    return render_template('notes.html', notes=notes, notebooks=notebooks)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -115,11 +114,11 @@ def notebook(notebook_id):
 @login_required
 def create_notebook():
     if request.method == 'POST':
-
         title = request.form['title']
         new_notebook = Notebook(title=title, user_id=current_user.id)
         db.session.add(new_notebook)
         db.session.commit()
+        flash('Notebook created successfully!')
         return redirect(url_for('notebooks'))
 
     return render_template('create_notebook.html')  # Render the form for creating a notebook
@@ -131,10 +130,21 @@ def delete_notebook(notebook_id):
     if notebook and notebook.user_id == current_user.id:
         db.session.delete(notebook)
         db.session.commit()
+        flash('Notebook deleted successfully!')
     return redirect(url_for('notebooks'))
 
+@app.route('/add_note_to_notebook/<int:notebook_id>', methods=['POST'])
+@login_required
+def add_note_to_notebook(notebook_id):
+    note_content = request.form['note']
+    new_note = Note(content=note_content, user_id=current_user.id)
+    db.session.add(new_note)
+    db.session.commit()
+    flash('Note added to notebook!')
+    return redirect(url_for('notebook', notebook_id=notebook_id))
+
 with app.app_context():
-    db.create_all()  # This will create the tables in the database
+    db.create_all()  
 
 if __name__ == "__main__":
     app.run(debug=True)
