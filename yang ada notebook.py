@@ -2,8 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-from flask import current_app
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -84,14 +83,22 @@ def add_note():
     db.session.commit()
     return redirect(url_for('index'))
 
-@app.route('/delete_note/<int:note_id>')
+@app.route('/delete_note/<int:note_id>', methods=['POST'])
 @login_required
 def delete_note(note_id):
     note = Note.query.get(note_id)
-    if note and note.user_id == current_user.id:
-        db.session.delete(note)
-        db.session.commit()
-    return redirect(url_for('index'))
+    if note is None:
+        flash('Note not found.', 'error')
+        return redirect(url_for('index'))
+    if note.user_id != current_user.id:
+        flash('You do not have permission to delete this note.', 'error')
+        return redirect(url_for('index'))
+    notebook_id = note.notebook_id
+    db.session.delete(note)
+    db.session.commit()
+
+    return redirect(url_for('notebook', notebook_id=notebook_id))
+
 
 @app.route('/create_notebook', methods=['POST'])
 @login_required
@@ -109,7 +116,7 @@ def notebook(notebook_id):
     notebook = Notebook.query.get_or_404(notebook_id)
     if notebook.user_id != current_user.id:
         flash("You do not have access to this notebook.")
-        return redirect(url_for('notebooks'))
+        return redirect(url_for('index'))
 
     if request.method == 'POST':
         notebook.content = request.form['content']
@@ -128,7 +135,7 @@ def delete_notebook(notebook_id):
         db.session.delete(notebook)
         db.session.commit()
         flash('Notebook deleted successfully!')
-    return redirect(url_for('notebooks'))
+    return redirect(url_for('index'))
 
 @app.route('/add_note_to_notebook/<int:notebook_id>', methods=['POST'])
 @login_required
