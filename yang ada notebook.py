@@ -2,6 +2,8 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from flask import current_app
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -19,13 +21,16 @@ class User(UserMixin, db.Model):
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(500), nullable=False)
+    doodle = db.Column(db.String(500), nullable=True)  # Store the file path instead of base64
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notebook_id = db.Column(db.Integer, db.ForeignKey('notebook.id'), nullable=True)
 
 class Notebook(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
     content = db.Column(db.Text, nullable=True)  # Store the content as text
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notes = db.relationship('Note', backref='notebook', lazy=True)  # Add this line
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -88,6 +93,15 @@ def delete_note(note_id):
         db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/create_notebook', methods=['POST'])
+@login_required
+def create_notebook():
+    title = request.form['title']
+    new_notebook = Notebook(title=title, user_id=current_user.id)
+    db.session.add(new_notebook)
+    db.session.commit()
+    flash('Notebook created successfully!')
+    return redirect(url_for('index'))
 
 @app.route('/notebook/<int:notebook_id>', methods=['GET', 'POST'])
 @login_required
@@ -120,7 +134,8 @@ def delete_notebook(notebook_id):
 @login_required
 def add_note_to_notebook(notebook_id):
     note_content = request.form['note']
-    new_note = Note(content=note_content, user_id=current_user.id)
+    doodle_data = request.form['doodle']  # Get the doodle data from the form
+    new_note = Note(content=note_content, doodle=doodle_data, user_id=current_user.id, notebook_id=notebook_id)  # Set notebook_id
     db.session.add(new_note)
     db.session.commit()
     flash('Note added to notebook!')
