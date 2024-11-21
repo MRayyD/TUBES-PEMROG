@@ -1,12 +1,13 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, session
+from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://your_username:your_password@localhost/note_app'
-app.config['SECURITY_PASSWORD_HASH'] = 'pbkdf2:sha256'
+
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -19,13 +20,15 @@ class User(UserMixin, db.Model):
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(500), nullable=False)
+    doodle = db.Column(db.String(500), nullable=True)  # Store the file path instead of base64
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notebook_id = db.Column(db.Integer, db.ForeignKey('notebook.id'), nullable=True)
 
 class Notebook(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
-    content = db.Column(db.Text, nullable=True)  # Store the content as text
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notes = db.relationship('Note', backref='notebook', lazy=True)  # Add this line
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -35,7 +38,8 @@ def load_user(user_id):
 @login_required
 def index():
     notes = Note.query.filter_by(user_id=current_user.id).all()
-    return render_template('notes.html', notes=notes)
+    notebooks = Notebook.query.filter_by(user_id=current_user.id).all()
+    return render_template('notes.html', notes=notes, notebooks=notebooks)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -78,36 +82,22 @@ def add_note():
     db.session.commit()
     return redirect(url_for('index'))
 
-@app.route('/delete_note/<int:note_id>')
+@app.route('/delete_note/<int:note_id>', methods=['POST'])
 @login_required
 def delete_note(note_id):
     note = Note.query.get(note_id)
-    if note and note.user_id == current_user.id:
-        db.session.delete(note)
-        db.session.commit()
-    return redirect(url_for('index'))
+    if note is None:
+        flash('Note not found.', 'error')
+        return redirect(url_for('index'))
+    if note.user_id != current_user.id:
+        flash('You do not have permission to delete this note.', 'error')
+        return redirect(url_for('index'))
+    notebook_id = note.notebook_id
+    db.session.delete(note)
+    db.session.commit()
 
-@app.route('/notebooks')
-@login_required
-def notebooks():
-    notebooks = Notebook.query.filter_by(user_id=current_user.id).all()
-    return render_template('notebooks.html', notebooks=notebooks)
+    return redirect(url_for('notebook', notebook_id=notebook_id))
 
-@app.route('/notebook/<int:notebook_id>', methods=['GET', 'POST'])
-@login_required
-def notebook(notebook_id):
-    notebook = Notebook.query.get_or_404(notebook_id)
-    if notebook.user_id != current_user.id:
-        flash("You do not have access to this notebook.")
-        return redirect(url_for('notebooks'))
-
-    if request.method == 'POST':
-        notebook.content = request.form['content']
-        db.session.commit()
-        flash('Notebook updated successfully!')
-        return redirect(url_for('notebook', notebook_id=notebook.id))
-
-    return render_template('notebook.html', notebook=notebook)
 
 @app.route('/create_notebook', methods=['POST'])
 @login_required
@@ -116,7 +106,24 @@ def create_notebook():
     new_notebook = Notebook(title=title, user_id=current_user.id)
     db.session.add(new_notebook)
     db.session.commit()
-    return redirect(url_for('notebooks'))
+    flash('Notebook created successfully!')
+    return redirect(url_for('index'))
+
+@app.route('/notebook/<int:notebook_id>', methods=['GET', 'POST'])
+@login_required
+def notebook(notebook_id):
+    notebook = Notebook.query.get_or_404(notebook_id)
+    if notebook.user_id != current_user.id:
+        flash("You do not have access to this notebook.")
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        db.session.commit()
+        flash('Notebook updated successfully!')
+        return redirect(url_for('notebook', notebook_id=notebook.id))
+
+    return render_template('notebook.html', notebook=notebook)
+
 
 @app.route('/delete_notebook/<int:notebook_id>')
 @login_required
@@ -125,10 +132,22 @@ def delete_notebook(notebook_id):
     if notebook and notebook.user_id == current_user.id:
         db.session.delete(notebook)
         db.session.commit()
-    return redirect(url_for('notebooks'))
+        flash('Notebook deleted successfully!')
+    return redirect(url_for('index'))
+
+@app.route('/add_note_to_notebook/<int:notebook_id>', methods=['POST'])
+@login_required
+def add_note_to_notebook(notebook_id):
+    note_content = request.form['note']
+    doodle_data = request.form['doodle']  # Get the doodle data from the form
+    new_note = Note(content=note_content, doodle=doodle_data, user_id=current_user.id, notebook_id=notebook_id)  # Set notebook_id
+    db.session.add(new_note)
+    db.session.commit()
+    flash('Note added to notebook!')
+    return redirect(url_for('notebook', notebook_id=notebook_id))
 
 with app.app_context():
-    db.create_all()  # This will create the tables in the database
+    db.create_all()  
 
 if __name__ == "__main__":
     app.run(debug=True)
