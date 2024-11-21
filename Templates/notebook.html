@@ -6,36 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>{{ notebook.title }}</title>
-
-
-
-    <style>
-        #canvas-container {
-            height: 300px;
-            /* Set a fixed height for the container */
-            overflow: auto;
-            /* Enable scrolling if content exceeds height */
-            border: 1px solid #000;
-            /* Optional: Add a border around the container */
-        }
-
-        #canvas {
-            border: 1px solid #000;
-            cursor: crosshair;
-            touch-action: none;
-            /* Prevent default touch actions */
-            width: 100%;
-            /* Make canvas width 100% of the parent */
-            height: 100%;
-            /* Set height to 100% of the container */
-        }
-
-        textarea,
-        canvas,
-        button {
-            margin-top: 10px;
-        }
-    </style>
 </head>
 
 <body>
