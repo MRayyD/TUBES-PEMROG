@@ -35,7 +35,6 @@ canvas.addEventListener('mousemove', (e) => {
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.closePath();
     ctx.stroke();
     lastX = e.offsetX;
     lastY = e.offsetY;
@@ -60,7 +59,6 @@ canvas.addEventListener('touchmove', (e) => {
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
-    ctx.closePath();
     ctx.stroke();
     lastX = touch.clientX - canvas.getBoundingClientRect().left;
     lastY = touch.clientY - canvas.getBoundingClientRect().top;
@@ -71,49 +69,41 @@ canvas.addEventListener('touchend', () => {
     ctx.beginPath(); // Reset the path
 });
 
-
-
 // Resize canvas to fit the width of the screen
 function resizeCanvas() {
     canvas.width = canvas.clientWidth; // Set canvas width to its client width
     canvas.height = 300; // Set a fixed height
 }
 
-        // Save doodle as image
+// Save doodle as image
 function saveDoodle() {
+
     const doodleInput = document.getElementById('doodleInput');
 
-    // Convert canvas to data URL
     const dataURL = canvas.toDataURL('image/png');
 
-    // Convert data URL to Blob
-    fetch(dataURL)
-        .then(res => res.blob())
-        .then(blob => {
-            // Create a new File object with the Blob
-            const file = new File([blob], 'doodle.png', { type: 'image/png' });
+    doodleInput.value = dataURL; // Save the doodle data to the hidden input
 
-            // Create a DataTransfer object to hold the file
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
+}
 
-            // Assign the files to the hidden input
-            doodleInput.files = dataTransfer.files;
-        });
+
+function validateNote() {
+
+    const noteInput = document.getElementById('noteInput');
+
+    if (noteInput.value.trim() === '') {
+
+        alert('Please enter a note before submitting.'); // Alert if the note is empty
+
+        return false; // Prevent form submission
+
+    }
+
+    saveDoodle(); // Save doodle data before submitting
 
     return true; // Allow form submission
-}
 
-// Validate note input
-function validateNote() {
-    const noteInput = document.getElementById('noteInput');
-    if (noteInput.value.trim() === '') {
-        alert('Please enter a note before submitting.'); // Alert if the note is empty
-        return false; // Prevent form submission
-    }
-    return saveDoodle(); // Call saveDoodle to save doodle before submission
 }
-
 // Resize canvas on window load and resize
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
