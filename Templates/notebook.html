@@ -28,7 +28,7 @@
             {% if note.doodle %}
             <img src="{{ note.doodle }}" alt="Doodle" width="500">
             {% else %}
-            <p>No doodle available.</p>
+            <p> </p>
             {% endif %}
             <form action="{{ url_for('delete_note', note_id=note.id) }}" method="POST">
                 <button type="submit">Delete Note</button>
@@ -42,17 +42,19 @@
         onsubmit="return validateNote();">
         <textarea id="noteInput" name="note" placeholder="Add a new note..."></textarea>
         <input type="hidden" id="doodleInput" name="doodle">
-        <!-- Hidden file input -->
 
         <h3>Doodle Area:</h3>
         <div id="canvas-container">
             <canvas id="canvas"></canvas>
+            <div>
+                <button type="button" id="eraserButton">Toggle Eraser</button>
+                <button type="button" id="undoButton">Undo</button>
+            </div>
         </div>
 
         <button type="submit">Add Note</button>
     </form>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    
 </body>
 
 </html>

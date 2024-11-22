@@ -3,6 +3,11 @@ const ctx = canvas.getContext('2d');
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
+let hasDrawn = false;
+let isErasing = false;
+
+// Stack to store canvas states for undo
+const undoStack = [];
 
 // Fill the canvas with a white background
 function fillCanvas() {
@@ -10,28 +15,51 @@ function fillCanvas() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-// Call fillCanvas to set the initial background
+// Save the current canvas state
+function saveState() {
+    if (undoStack.length === 10) {
+        undoStack.shift(); // Limit stack to 10 states
+    }
+    undoStack.push(canvas.toDataURL());
+}
+
+// Restore the last canvas state
+function undo() {
+    if (undoStack.length > 0) {
+        const previousState = undoStack.pop();
+        const img = new Image();
+        img.src = previousState;
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            ctx.drawImage(img, 0, 0); // Restore the previous state
+        };
+    }
+}
+
+// Initialize the canvas
 fillCanvas();
 
-// Start drawing
+// Event listeners for drawing
 canvas.addEventListener('mousedown', (e) => {
     drawing = true;
     lastX = e.offsetX;
     lastY = e.offsetY;
+    saveState(); // Save the state before starting a new drawing action
 });
 
-// Stop drawing
 canvas.addEventListener('mouseup', () => {
     drawing = false;
     ctx.beginPath(); // Reset the path
 });
 
-// Draw on the canvas
 canvas.addEventListener('mousemove', (e) => {
     if (!drawing) return;
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
+    hasDrawn = true;
+
+    ctx.strokeStyle = isErasing ? 'white' : 'black';
+    ctx.lineWidth = isErasing ? 10 : 2;
     ctx.lineJoin = 'round';
+
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(e.offsetX, e.offsetY);
@@ -40,22 +68,25 @@ canvas.addEventListener('mousemove', (e) => {
     lastY = e.offsetY;
 });
 
-// Handle touch events for mobile
+// Handle touch events (mobile)
 canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent scrolling
+    e.preventDefault();
     const touch = e.touches[0];
     lastX = touch.clientX - canvas.getBoundingClientRect().left;
     lastY = touch.clientY - canvas.getBoundingClientRect().top;
     drawing = true;
+    saveState(); // Save the state before starting a new drawing action
 });
 
 canvas.addEventListener('touchmove', (e) => {
     if (!drawing) return;
-    e.preventDefault(); // Prevent scrolling
+    e.preventDefault();
+
     const touch = e.touches[0];
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isErasing ? 'white' : 'black';
+    ctx.lineWidth = isErasing ? 10 : 2;
     ctx.lineJoin = 'round';
+
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
@@ -66,44 +97,51 @@ canvas.addEventListener('touchmove', (e) => {
 
 canvas.addEventListener('touchend', () => {
     drawing = false;
-    ctx.beginPath(); // Reset the path
+    ctx.beginPath();
 });
 
-// Resize canvas to fit the width of the screen
+// Undo button functionality
+const undoButton = document.getElementById('undoButton');
+undoButton.addEventListener('click', undo);
+
+// Eraser button functionality
+const eraserButton = document.getElementById('eraserButton');
+eraserButton.addEventListener('click', () => {
+    isErasing = !isErasing;
+    eraserButton.textContent = isErasing ? 'Switch to Drawing' : 'Toggle Eraser';
+});
+
+// Resize canvas
 function resizeCanvas() {
-    canvas.width = canvas.clientWidth; // Set canvas width to its client width
-    canvas.height = 300; // Set a fixed height
+    canvas.width = canvas.clientWidth;
+    canvas.height = 300;
 }
 
-// Save doodle as image
+// Save doodle only if there's content
 function saveDoodle() {
-
     const doodleInput = document.getElementById('doodleInput');
 
-    const dataURL = canvas.toDataURL('image/png');
+    if (!hasDrawn) {
+        doodleInput.value = '';
+        return;
+    }
 
-    doodleInput.value = dataURL; // Save the doodle data to the hidden input
-
+    doodleInput.value = canvas.toDataURL();
 }
 
-
+// Validate note before submission
 function validateNote() {
-
     const noteInput = document.getElementById('noteInput');
 
     if (noteInput.value.trim() === '') {
-
-        alert('Please enter a note before submitting.'); // Alert if the note is empty
-
-        return false; // Prevent form submission
-
+        alert('Please enter a note before submitting.');
+        return false;
     }
 
-    saveDoodle(); // Save doodle data before submitting
-
-    return true; // Allow form submission
-
+    saveDoodle();
+    return true;
 }
-// Resize canvas on window load and resize
+
+// Resize canvas on load and resize
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
