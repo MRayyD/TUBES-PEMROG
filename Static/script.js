@@ -3,19 +3,12 @@ const ctx = canvas.getContext('2d');
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
-let hasDrawn = false;
 let isErasing = false;
-
-// Stack to store canvas states for undo
+let hasDrawn = false;
 const undoStack = [];
+let currentColor = '#000000'; // Default color
 
-// Fill the canvas with a white background
-function fillCanvas() {
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// Save the current canvas state
+// Save the current canvas state for undo
 function saveState() {
     if (undoStack.length === 10) {
         undoStack.shift(); // Limit stack to 10 states
@@ -23,59 +16,73 @@ function saveState() {
     undoStack.push(canvas.toDataURL());
 }
 
-// Restore the last canvas state
+// Restore the last state for undo
 function undo() {
-    if (undoStack.length > 0) {
-        const previousState = undoStack.pop();
+    if (undoStack.length > 1) {
+        undoStack.pop(); // Remove current state
+        const previousState = undoStack[undoStack.length - 1];
         const img = new Image();
         img.src = previousState;
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-            ctx.drawImage(img, 0, 0); // Restore the previous state
+            ctx.drawImage(img, 0, 0); // Draw the previous state
         };
     }
 }
 
-// Initialize the canvas
-fillCanvas();
+// Initialize canvas size dynamically
+function resizeCanvas() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(canvas, 0, 0); // Copy current canvas content
 
-// Event listeners for drawing
+    canvas.width = canvas.clientWidth;
+    canvas.height = 300;
+
+    ctx.drawImage(tempCanvas, 0, 0); // Restore content after resizing
+}
+
+// Begin drawing or erasing
 canvas.addEventListener('mousedown', (e) => {
     drawing = true;
     lastX = e.offsetX;
     lastY = e.offsetY;
-    saveState(); // Save the state before starting a new drawing action
+    saveState(); // Save state before a new operation
 });
 
 canvas.addEventListener('mouseup', () => {
     drawing = false;
-    ctx.beginPath(); // Reset the path
+    ctx.beginPath(); // Reset path
 });
 
 canvas.addEventListener('mousemove', (e) => {
     if (!drawing) return;
-    hasDrawn = true;
 
-    ctx.strokeStyle = isErasing ? 'white' : 'black';
     ctx.lineWidth = isErasing ? 10 : 2;
     ctx.lineJoin = 'round';
+    ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : currentColor; // Fix the erasing mode issue
 
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(e.offsetX, e.offsetY);
     ctx.stroke();
+
     lastX = e.offsetX;
     lastY = e.offsetY;
+    hasDrawn = true;
 });
 
-// Handle touch events (mobile)
+// Handle touch events for mobile
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     const touch = e.touches[0];
     lastX = touch.clientX - canvas.getBoundingClientRect().left;
     lastY = touch.clientY - canvas.getBoundingClientRect().top;
     drawing = true;
-    saveState(); // Save the state before starting a new drawing action
+    saveState();
 });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -83,16 +90,22 @@ canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
 
     const touch = e.touches[0];
-    ctx.strokeStyle = isErasing ? 'white' : 'black';
     ctx.lineWidth = isErasing ? 10 : 2;
     ctx.lineJoin = 'round';
+    ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : currentColor; // Fix the erasing mode issue
 
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
-    ctx.lineTo(touch.clientX - canvas.getBoundingClientRect().left, touch.clientY - canvas.getBoundingClientRect().top);
+    ctx.lineTo(
+        touch.clientX - canvas.getBoundingClientRect().left,
+        touch.clientY - canvas.getBoundingClientRect().top
+    );
     ctx.stroke();
+
     lastX = touch.clientX - canvas.getBoundingClientRect().left;
     lastY = touch.clientY - canvas.getBoundingClientRect().top;
+    hasDrawn = true;
 });
 
 canvas.addEventListener('touchend', () => {
@@ -100,48 +113,44 @@ canvas.addEventListener('touchend', () => {
     ctx.beginPath();
 });
 
-// Undo button functionality
-const undoButton = document.getElementById('undoButton');
-undoButton.addEventListener('click', undo);
-
-// Eraser button functionality
+// Toggle eraser
 const eraserButton = document.getElementById('eraserButton');
 eraserButton.addEventListener('click', () => {
     isErasing = !isErasing;
     eraserButton.textContent = isErasing ? 'Switch to Drawing' : 'Toggle Eraser';
 });
 
-// Resize canvas
-function resizeCanvas() {
-    canvas.width = canvas.clientWidth;
-    canvas.height = 300;
-}
+// Undo functionality
+const undoButton = document.getElementById('undoButton');
+undoButton.addEventListener('click', undo);
 
-// Save doodle only if there's content
+// Handle color changes
+const colorPicker = document.getElementById('colorPicker');
+colorPicker.addEventListener('input', (e) => {
+    currentColor = e.target.value; // Update the current color
+});
+
+// Save doodle only if content exists
 function saveDoodle() {
     const doodleInput = document.getElementById('doodleInput');
-
     if (!hasDrawn) {
-        doodleInput.value = '';
+        doodleInput.value = ''; // Don't save blank data
         return;
     }
-
     doodleInput.value = canvas.toDataURL();
 }
 
-// Validate note before submission
+// Validate note
 function validateNote() {
     const noteInput = document.getElementById('noteInput');
-
     if (noteInput.value.trim() === '') {
         alert('Please enter a note before submitting.');
         return false;
     }
-
     saveDoodle();
     return true;
 }
 
-// Resize canvas on load and resize
+// Resize canvas on window load and resize
 window.addEventListener('load', resizeCanvas);
 window.addEventListener('resize', resizeCanvas);
