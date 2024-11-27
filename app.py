@@ -57,7 +57,7 @@ def register():
                 return redirect(url_for('register'))
 
             cursor.execute(
-                "INSERT INTO user (username, password) VALUES (%s, %s))",
+                "INSERT INTO user (username, password) VALUES (%s, %s)",
                 (username, password)
             )
             db.commit()
