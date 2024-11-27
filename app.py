@@ -147,7 +147,7 @@ def add_note():
     flash('Note added successfully!', 'success')
     return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
 
-@app.route('/delete_note/<int:note_id>')
+@app.route('/delete_note/<int:note_id>', methods=['POST'])
 def delete_note(note_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
