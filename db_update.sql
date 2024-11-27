@@ -14,6 +14,16 @@ MySQL - 5.5.5-10.4.32-MariaDB : Database - note_app
 
 CREATE DATABASE /*!32312 IF NOT EXISTS*/`note_app` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
 
+-- Create a user with a password
+CREATE USER 'your_username'@'localhost' IDENTIFIED BY 'your_password';
+
+-- Grant privileges to the user on the note_app database
+GRANT ALL PRIVILEGES ON note_app.* TO 'your_username'@'localhost';
+
+-- Flush privileges
+FLUSH PRIVILEGES;
+
+
 USE `note_app`;
 
 /*Table structure for table `note` */
@@ -30,7 +40,7 @@ CREATE TABLE `note` (
   KEY `user_id` (`user_id`),
   KEY `notebook_id` (`notebook_id`),
   CONSTRAINT `note_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `note_ibfk_2` FOREIGN KEY (`notebook_id`) REFERENCES `notebook` (`id`) ON DELETE SET NULL
+  CONSTRAINT `note_ibfk_2` FOREIGN KEY (`notebook_id`) REFERENCES `notebook` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=104 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 /*Data for the table `note` */

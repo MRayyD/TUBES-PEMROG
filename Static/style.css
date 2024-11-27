@@ -27,6 +27,7 @@ nav a {
 #canvas-container {
     height: 300px;
     /* Set a fixed height for the container */
+    width: 30%;
     overflow: auto;
     /* Enable scrolling if content exceeds height */
     border: 1px solid #000;

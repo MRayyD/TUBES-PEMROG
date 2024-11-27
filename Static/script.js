@@ -36,10 +36,14 @@ function resizeCanvas() {
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
     const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(canvas, 0, 0); // Copy current canvas content
+    tempCtx.drawImage(canvas, 0, 0);
+
 
     canvas.width = canvas.clientWidth;
     canvas.height = 300;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height); 
+
 
     ctx.drawImage(tempCanvas, 0, 0); // Restore content after resizing
 }
@@ -137,7 +141,7 @@ function saveDoodle() {
         doodleInput.value = ''; // Don't save blank data
         return;
     }
-    doodleInput.value = canvas.toDataURL();
+    doodleInput.value = canvas.toDataURL('image/png', 0.5);
 }
 
 // Validate note

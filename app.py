@@ -1,57 +1,68 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask import Flask, render_template, redirect, url_for, request, flash, session, g
+import pymysql
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://your_username:your_password@localhost/note_app'
 
-db = SQLAlchemy(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+# Database configuration
+DB_HOST = 'localhost'
+DB_USER = 'your_username'
+DB_PASSWORD = 'your_password'
+DB_NAME = 'note_app'
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+# Helper function to get a database connection
+def get_db():
+    if 'db' not in g:
+        g.db = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    return g.db
 
-class Note(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String(500), nullable=False)
-    doodle = db.Column(db.String(500), nullable=True)  # Store the file path instead of base64
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    notebook_id = db.Column(db.Integer, db.ForeignKey('notebook.id'), nullable=True)
+@app.teardown_appcontext
+def close_db(error):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
-class Notebook(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(150), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    notes = db.relationship('Note', backref='notebook', lazy=True)  # Add this line
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
+# Routes
 @app.route('/')
-@login_required
 def index():
-    notes = Note.query.filter_by(user_id=current_user.id).all()
-    notebooks = Notebook.query.filter_by(user_id=current_user.id).all()
-    return render_template('notes.html', notes=notes, notebooks=notebooks)
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT * FROM notebook WHERE user_id = %s", (user_id,))
+        notebooks = cursor.fetchall()
+        cursor.execute("SELECT * FROM note WHERE user_id = %s", (user_id))
+        notes = cursor.fetchall()
+    return render_template('notes.html', notebooks=notebooks, notes=notes)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(username=username, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-        flash('Registration successful! Please log in.')
-        return redirect(url_for('login'))
+        
+        db = get_db()
+        with db.cursor() as cursor:
+            cursor.execute("SELECT id FROM user WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash('Username already exists.', 'error')
+                return redirect(url_for('register'))
+
+            cursor.execute(
+                "INSERT INTO user (username, password) VALUES (%s, %s))",
+                (username, password)
+            )
+            db.commit()
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -59,95 +70,143 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
-            login_user(user)
-            return redirect(url_for('index'))
-        else:
-            flash('Login failed. Check your username and/or password.')
+
+        db = get_db()
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM user WHERE username = %s AND password = %s",
+                (username, password)
+            )
+            user = cursor.fetchone()
+            if user:
+                session['user_id'] = user['id']
+                return redirect(url_for('index'))
+            flash('Invalid credentials.', 'error')
     return render_template('login.html')
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    session.pop('user_id', None)
     return redirect(url_for('login'))
 
-@app.route('/add_note', methods=['POST'])
-@login_required 
-def add_note():
-    note_content = request.form['note']
-    new_note = Note(content=note_content, user_id=current_user.id)
-    db.session.add(new_note)
-    db.session.commit()
-    return redirect(url_for('index'))
-
-@app.route('/delete_note/<int:note_id>', methods=['POST'])
-@login_required
-def delete_note(note_id):
-    note = Note.query.get(note_id)
-    if note is None:
-        flash('Note not found.', 'error')
-        return redirect(url_for('index'))
-    if note.user_id != current_user.id:
-        flash('You do not have permission to delete this note.', 'error')
-        return redirect(url_for('index'))
-    notebook_id = note.notebook_id
-    db.session.delete(note)
-    db.session.commit()
-
-    return redirect(url_for('notebook', notebook_id=notebook_id))
-
-
 @app.route('/create_notebook', methods=['POST'])
-@login_required
 def create_notebook():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
     title = request.form['title']
-    new_notebook = Notebook(title=title, user_id=current_user.id)
-    db.session.add(new_notebook)
-    db.session.commit()
-    flash('Notebook created successfully!')
+    user_id = session['user_id']
+
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO notebook (title, user_id) VALUES (%s, %s)",
+            (title, user_id)
+        )
+        db.commit()
+    flash('Notebook created successfully!', 'success')
     return redirect(url_for('index'))
 
-@app.route('/notebook/<int:notebook_id>', methods=['GET', 'POST'])
-@login_required
+@app.route('/notebook/<int:notebook_id>')
 def notebook(notebook_id):
-    notebook = Notebook.query.get_or_404(notebook_id)
-    if notebook.user_id != current_user.id:
-        flash("You do not have access to this notebook.")
-        return redirect(url_for('index'))
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT * FROM notebook WHERE id = %s AND user_id = %s", (notebook_id, user_id))
+        notebook = cursor.fetchone()
+        if not notebook:
+            flash('Notebook not found or access denied.', 'error')
+            return redirect(url_for('index'))
+        
+        cursor.execute("SELECT * FROM note WHERE notebook_id = %s", (notebook_id))
+        note = cursor.fetchall()
+    
+    session['current_notebook_id'] = notebook_id
+    return render_template('notebook.html', notebook=notebook, note=note)
 
-    if request.method == 'POST':
-        db.session.commit()
-        flash('Notebook updated successfully!')
-        return redirect(url_for('notebook', notebook_id=notebook.id))
+@app.route('/add_note', methods=['POST'])
+def add_note():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    note_content = request.form['note']
+    note_doodle = request.form['doodle']
+    notebook_id = session.get('current_notebook_id')
+    user_id = session['user_id']
 
-    return render_template('notebook.html', notebook=notebook)
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO note (content, user_id, doodle, notebook_id) VALUES (%s, %s, %s, %s)",
+            (note_content, user_id, note_doodle, notebook_id)
+        )
+        db.commit()
+    flash('Note added successfully!', 'success')
+    return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
 
+@app.route('/delete_note/<int:note_id>')
+def delete_note(note_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    notebook_id = session.get('current_notebook_id')
+
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("DELETE FROM note WHERE id = %s AND user_id = %s", (note_id, user_id))
+        db.commit()
+    flash('Note deleted successfully!', 'success')
+    return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
 
 @app.route('/delete_notebook/<int:notebook_id>')
-@login_required
 def delete_notebook(notebook_id):
-    notebook = Notebook.query.get(notebook_id)
-    if notebook and notebook.user_id == current_user.id:
-        db.session.delete(notebook)
-        db.session.commit()
-        flash('Notebook deleted successfully!')
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("DELETE FROM note WHERE notebook_id = %s", (notebook_id,))
+        cursor.execute("DELETE FROM notebook WHERE id = %s AND user_id = %s", (notebook_id, user_id))
+        db.commit()
+    flash('Notebook deleted successfully!', 'success')
     return redirect(url_for('index'))
 
-@app.route('/add_note_to_notebook/<int:notebook_id>', methods=['POST'])
-@login_required
-def add_note_to_notebook(notebook_id):
-    note_content = request.form['note']
-    doodle_data = request.form['doodle']  # Get the doodle data from the form
-    new_note = Note(content=note_content, doodle=doodle_data, user_id=current_user.id, notebook_id=notebook_id)  # Set notebook_id
-    db.session.add(new_note)
-    db.session.commit()
-    flash('Note added to notebook!')
-    return redirect(url_for('notebook', notebook_id=notebook_id))
+# Database setup script
+@app.before_request
+def setup_database():
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(150) UNIQUE NOT NULL,
+            password CHAR(64) NOT NULL
+        );
+        """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notebook (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(150) NOT NULL,
+            user_id INT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user(id)
+        );
+        """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS note (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            content VARCHAR(500) NOT NULL,
+            user_id INT NOT NULL,
+            notebook_id INT DEFAULT NULL,
+            FOREIGN KEY (user_id) REFERENCES user(id),
+            FOREIGN KEY (notebook_id) REFERENCES notebook(id)
+        );
+        """)
+        db.commit()
 
-with app.app_context():
-    db.create_all()  
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
