@@ -4,7 +4,6 @@
 <title>Page Title</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <style>
 * {
   box-sizing: border-box;
@@ -88,14 +87,7 @@ body {
 </style>
 </head>
 <body>
-  <nav>
-    {% if session %}
-      <a href="{{ url_for('logout') }}">Logout</a>
-    {% else %}
-      <a href="{{ url_for('login') }}">Login</a>
-      <a href="{{ url_for('register') }}">Register</a>
-    {% endif %}
-  </nav>
+
   <div class="header">
     <h1>Memolink</h1>
     <p>A tool for enhancing productivity.</p>
@@ -103,14 +95,20 @@ body {
 
   
 <div class="navbar">
-  <a href="{{ url_for('index') }}">Home</a>
-  <a href="{{ url_for('addID_notebook') }}" method="POST">Write a Note</a>
+  <a href="front-display.html">Home</a>
+  <a href="write-note.html">Write a Note</a>
   <a href="note-list.html">Note List</a>
 </div>
-<h3>Create a New Notebook</h3>
-    <form action="{{ url_for('create_notebook') }}" method="POST">
-        <input type="text" name="title" placeholder="Notebook Title" required>
-        <button type="submit">Create Notebook</button>
-    </form>
+
+<div class="row">
+  <div class="side">
+  </div>
+  <div class="main" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: justify; height:50vh;">
+    <p>Memolink is an intuitive note-taking app designed to help you stay organized and efficient. Quickly create and organize notes, lists, and ideas with a clean, user-friendly interface. With rich text editing, device syncing, offline access, and secure encryption, Memolink ensures your data is safe and always accessible. Perfect for students, professionals, and creatives.
+    </p>
+
+    </div>
+</div>
+
 </body>
 </html>

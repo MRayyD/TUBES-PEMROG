@@ -210,3 +210,24 @@ def setup_database():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+"""@app.route('/write_notebook')
+def write_notebook():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    return render_template('write-note.html')
+
+@app.route('/list_notebook')
+def list_notebook():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    db = get_db()
+    with db.cursor() as cursor:
+        cursor.execute("SELECT * FROM notebook WHERE user_id = %s", (user_id,))
+        notebooks = cursor.fetchall()
+        cursor.execute("SELECT * FROM note WHERE user_id = %s", (user_id,))
+        notes = cursor.fetchall()
+    return render_template('note-list.html', notebooks=notebooks, notes=notes)"""
