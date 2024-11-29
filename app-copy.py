@@ -107,7 +107,7 @@ class Note:
             return cursor.fetchall()
 
     @staticmethod
-    def create(content, user_id, notebook_id=None, doodle=None):
+    def create(content, user_id, notebook_id, doodle=None):
         db = get_db()
         with db.cursor() as cursor:
             cursor.execute(
@@ -158,7 +158,7 @@ def index():
     user_id = session['user_id']
     notebooks = Notebook.find_by_user_id(user_id)
     notes = Note.find_by_notebook_id(None)
-    return render_template('notes-2.html', notebooks=notebooks, notes=notes)
+    return render_template('notes-index.html', notebooks=notebooks, notes=notes)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -223,20 +223,6 @@ def list_notebook():
         notes = cursor.fetchall()
     return render_template('note-list.html', notebooks=notebooks, notes=notes)
 
-@app.route('/add_note', methods=['POST'])
-def add_note():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    title = request.form['title']
-    content = request.form['note']
-    doodle = request.form.get('doodle')
-    notebook_id = session.get('current_notebook_id')
-
-    Note.create(content, session['user_id'], notebook_id, doodle)
-    flash('Note added successfully!', 'success')
-    return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
-
 @app.route('/delete_notebook/<int:notebook_id>')
 def delete_notebook(notebook_id):
     if 'user_id' not in session:
@@ -246,6 +232,31 @@ def delete_notebook(notebook_id):
     Notebook.delete(notebook_id, user_id)
     flash('Notebook deleted successfully!', 'success')
     return render_template('note-list.html')
+
+@app.route('/add_note', methods=['POST'])
+def add_note():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    title = request.form['title']
+    content = request.form['note'] 
+    doodle = request.form.get('doodle')
+    notebook_id = session.get('current_notebook_id')
+
+    Note.create(content, session['user_id'], notebook_id, doodle)
+    flash('Note added successfully!', 'success')
+    return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
+
+@app.route('/delete_note/<int:note_id>')
+def delete_note(note_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    Note.delete(note_id, user_id)
+    flash('Note deleted successfully!', 'success')
+    return redirect(url_for('index'))
+
 
 
 if __name__ == '__main__':

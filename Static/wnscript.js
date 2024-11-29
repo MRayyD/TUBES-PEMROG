@@ -39,11 +39,13 @@ document.getElementById('toggleCanvas').addEventListener('click', function () {
         }
         
         // Undo functionality
-        const undoButton = document.createElement('button');
-        undoButton.textContent = 'Undo';
-        undoButton.style.marginTop = '10px';
+        const undoButton = document.getElementById('undoButton');
         undoButton.addEventListener('click', undo);
-        editor.appendChild(undoButton);
+        //const undoButton = document.createElement('button');
+        //undoButton.textContent = 'Undo';
+        //undoButton.style.marginTop = '10px';
+        //undoButton.addEventListener('click', undo);
+        
         
         // Begin drawing or erasing
         canvas.addEventListener('mousedown', () => {
