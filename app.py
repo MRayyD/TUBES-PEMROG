@@ -176,6 +176,7 @@ def delete_notebook(notebook_id):
     flash('Notebook deleted successfully!', 'success')
     return redirect(url_for('index'))
 
+
 # Database setup script
 @app.before_request
 def setup_database():
