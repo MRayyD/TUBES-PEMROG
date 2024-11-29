@@ -146,7 +146,6 @@
                         <!--INPUT-->
                         <input type="title" id="title" name="title" placeholder="Input title..." required>
                         <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..."></textarea>
-                        <!--<textarea id="noteInput" name="note" placeholder="Place your content here..."></textarea>-->
                         <!--INPUT-->
                         <!-- <label for="tag">Tag</label> -->
                         <!-- <input type="tag" id="tag" name="tag" placeholder="Input tag..."> -->
@@ -160,6 +159,7 @@
                 </div>
             </div>
             <div class="main">
+                <input type="hidden" id="doodleInput" name="doodle">
                 <div class="main-header">
                     <h2>Main Content</h2>
                     <div>
@@ -172,7 +172,6 @@
                 </div>
             </div>
         </div>
-    <!---->
     </form>
     <script src="{{ url_for('static', filename='wnscript.js') }}"> </script>
 </body>

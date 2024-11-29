@@ -118,20 +118,20 @@
 
   <!-- Vertical Menu -->
   <div class="vertical-menu">
-    <h2>Notes:</h2>
+    <h2>Notes</h2>
     <ul>
       {% if notes %}
-      {% for note in notes %}
-        <li class="menu-item">
-          {{ note.content }}
-          <a href="{{ url_for('delete_note', note_id=note.id) }}">
-            <i class="fa-solid fa-trash"></i> <!-- Trash icon -->
-          </a>
-        </li>
-      {% endfor %}
-    {% else %}
-      <li>No notes available.</li>
-    {% endif %}
+        {% for note in notes %}
+          <li class="menu-item">
+            {{ note.content }}
+            <a href="{{ url_for('delete_note', note_id=note.id) }}">
+              <i class="fa-solid fa-trash"></i> <!-- Trash icon -->
+            </a>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li>No notes available.</li>
+      {% endif %}
     </ul>
 
     <h2>Your Notebooks</h2>
@@ -150,21 +150,5 @@
       {% endif %}
     </ul>
   </div>
-
-  <!-- Vertical Menu
-  <div class="vertical-menu">
-      <div class="menu-item">
-      <a href="#">Link 1</a>
-      <i class="fa-solid fa-trash"></i>  <!-- Trash icon 
-    </div>
-    <div class="menu-item">
-      <a href="#">Link 2</a>
-      <i class="fa-solid fa-trash"></i>
-    </div>
-    <div class="menu-item">
-      <a href="#">Link 3</a>
-      <i class="fa-solid fa-trash"></i>
-    </div>
-  </div> -->
 </body>
 </html>

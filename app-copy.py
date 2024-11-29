@@ -191,8 +191,7 @@ def logout():
     AuthManager.logout()
     return redirect(url_for('login'))
 
-
-@app.route('/create_notebook', methods=['POST'])
+"""@app.route('/create_notebook', methods=['POST'])
 def create_notebook():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -200,7 +199,7 @@ def create_notebook():
     title = request.form['title']
     Notebook.create(title, session['user_id'])
     flash('Notebook created successfully!', 'success')
-    return redirect(url_for('index'))
+    return redirect(url_for('index'))"""
 
 @app.route('/write_notebook')
 def write_notebook():
@@ -243,9 +242,14 @@ def add_note():
     doodle = request.form.get('doodle')
     notebook_id = session.get('current_notebook_id')
 
+    if not notebook_id:
+        flash('Notebook ID is missing.', 'error')
+        return redirect(url_for('index'))
+
+    Notebook.create(title, session['user_id'])
     Note.create(content, session['user_id'], notebook_id, doodle)
     flash('Note added successfully!', 'success')
-    return redirect(url_for('index' if not notebook_id else 'notebook', notebook_id=notebook_id))
+    return redirect(url_for('index' if not notebook_id else 'list_notebook', notebook_id=notebook_id))
 
 @app.route('/delete_note/<int:note_id>')
 def delete_note(note_id):
