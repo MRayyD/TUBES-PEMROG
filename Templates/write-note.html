@@ -142,12 +142,17 @@
             <div class="side">
                 <h2>Your Note</h2>
                 <div class="container">
-                        <label for="title">Title</label>
-                        <!--INPUT-->
-                        <input type="title" id="title" name="title" placeholder="Input title..." required>
-                        <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..."></textarea>
-                        <!--INPUT-->
-                        <button type="submit">Add Note</button>
+                    <label for="notebook">Notebook</label>
+                    <select id="notebook" name="notebook_id" required>
+                        <option value="" disabled selected>Select a notebook</option>
+                        {% for notebook in notebooks %}
+                            <option value="{{ notebook.id }}">{{ notebook.title }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="title">Title</label>
+                    <input type="text" id="title" name="title" placeholder="Input title...">
+                    <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..."></textarea>
+                    <button type="submit">Add Note</button>
                 </div>
             </div>
             <div class="main">

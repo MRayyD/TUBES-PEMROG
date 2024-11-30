@@ -206,7 +206,9 @@ def write_notebook():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    return render_template('write-note.html')
+    user_id = session['user_id']
+    notebooks = Notebook.find_by_user_id(user_id)
+    return render_template('write-note.html', notebooks=notebooks)
 
 @app.route('/list_notebook')
 def list_notebook():
@@ -230,26 +232,32 @@ def delete_notebook(notebook_id):
     user_id = session['user_id']
     Notebook.delete(notebook_id, user_id)
     flash('Notebook deleted successfully!', 'success')
-    return render_template('note-list.html')
+    return redirect(url_for('list_notebook'))
 
 @app.route('/add_note', methods=['POST'])
 def add_note():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    title = request.form['title']
-    content = request.form['note'] 
+    user_id = session['user_id']
+    notebook_id = request.form.get('notebook_id')
+    title = request.form.get('title')
+    content = request.form.get('note')
     doodle = request.form.get('doodle')
-    notebook_id = session.get('current_notebook_id')
 
     if not notebook_id:
-        flash('Notebook ID is missing.', 'error')
-        return redirect(url_for('index'))
+        flash('Please select a notebook.', 'error')
+        return redirect(url_for('write_notebook'))
 
-    Notebook.create(title, session['user_id'])
-    Note.create(content, session['user_id'], notebook_id, doodle)
-    flash('Note added successfully!', 'success')
-    return redirect(url_for('index' if not notebook_id else 'list_notebook', notebook_id=notebook_id))
+    try:
+        Note.create(content, user_id, notebook_id, doodle)
+        flash('Note added successfully!', 'success')
+    except Exception as e:
+        app.logger.error(f"Error saving note: {e}")
+        flash('Failed to add note. Please try again.', 'error')
+
+    return redirect(url_for('list_notebook'))
+
 
 @app.route('/delete_note/<int:note_id>')
 def delete_note(note_id):
@@ -259,7 +267,7 @@ def delete_note(note_id):
     user_id = session['user_id']
     Note.delete(note_id, user_id)
     flash('Note deleted successfully!', 'success')
-    return redirect(url_for('index'))
+    return redirect(url_for('list_notebook'))
 
 
 
