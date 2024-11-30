@@ -240,23 +240,46 @@ def add_note():
         return redirect(url_for('login'))
 
     user_id = session['user_id']
-    notebook_id = request.form.get('notebook_id')
+    notebook_name = request.form.get('notebook_name')
     title = request.form.get('title')
     content = request.form.get('note')
     doodle = request.form.get('doodle')
 
-    if not notebook_id:
-        flash('Please select a notebook.', 'error')
+    if not notebook_name or not content or not title:
+        flash('Notebook name, title, and note content are required.', 'error')
         return redirect(url_for('write_notebook'))
 
     try:
+        # Check if notebook exists
+        db = get_db()
+        with db.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM notebook WHERE title = %s AND user_id = %s",
+                (notebook_name, user_id)
+            )
+            notebook = cursor.fetchone()
+
+        # Create notebook if it doesn't exist
+        if not notebook:
+            Notebook.create(notebook_name, user_id)
+            with db.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id FROM notebook WHERE title = %s AND user_id = %s",
+                    (notebook_name, user_id)
+                )
+                notebook = cursor.fetchone()
+
+        notebook_id = notebook['id']
+
+        # Add the note
         Note.create(content, user_id, notebook_id, doodle)
-        flash('Note added successfully!', 'success')
+        flash('Note and notebook added successfully!', 'success')
     except Exception as e:
         app.logger.error(f"Error saving note: {e}")
         flash('Failed to add note. Please try again.', 'error')
 
     return redirect(url_for('list_notebook'))
+
 
 
 @app.route('/delete_note/<int:note_id>')

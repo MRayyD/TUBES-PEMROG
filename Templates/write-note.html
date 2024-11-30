@@ -142,15 +142,8 @@
             <div class="side">
                 <h2>Your Note</h2>
                 <div class="container">
-                    <label for="notebook">Notebook</label>
-                    <select id="notebook" name="notebook_id" required>
-                        <option value="" disabled selected>Select a notebook</option>
-                        {% for notebook in notebooks %}
-                            <option value="{{ notebook.id }}">{{ notebook.title }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="title">Title</label>
-                    <input type="text" id="title" name="title" placeholder="Input title...">
+                    <label for="notebookName">Notebook</label>
+                    <input type="text" id="notebookName" name="notebook_name" placeholder="Enter notebook name...">
                     <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..."></textarea>
                     <button type="submit">Add Note</button>
                 </div>
@@ -170,6 +163,7 @@
             </div>
         </div>
     </form>
+    
     <script src="{{ url_for('static', filename='wnscript.js') }}"> </script>
 </body>
 </html>

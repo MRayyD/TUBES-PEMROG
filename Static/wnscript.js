@@ -12,6 +12,9 @@ document.getElementById('toggleCanvas').addEventListener('click', function () {
         const ctx = canvas.getContext('2d');
         const undoStack = [];
         let isDrawing = false;
+        let hasDrawn = false;
+        let isErasing = false;
+        let currentColor = 'black';
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         saveState();
@@ -37,29 +40,25 @@ document.getElementById('toggleCanvas').addEventListener('click', function () {
                 };
             }
         }
-        
+
         // Undo functionality
         const undoButton = document.getElementById('undoButton');
         undoButton.addEventListener('click', undo);
-        //const undoButton = document.createElement('button');
-        //undoButton.textContent = 'Undo';
-        //undoButton.style.marginTop = '10px';
-        //undoButton.addEventListener('click', undo);
-        
-        
+
         // Begin drawing or erasing
         canvas.addEventListener('mousedown', () => {
             isDrawing = true;
             saveState();
         });
-        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mouseup', () => (isDrawing = false));
         canvas.addEventListener('mousemove', (event) => {
             if (isDrawing) {
                 const rect = canvas.getBoundingClientRect();
                 ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = isErasing ? 10 : 2;
                 ctx.stroke();
+                hasDrawn = true;
             } else {
                 ctx.beginPath();
             }
@@ -69,73 +68,54 @@ document.getElementById('toggleCanvas').addEventListener('click', function () {
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
-            lastX = touch.clientX - canvas.getBoundingClientRect().left;
-            lastY = touch.clientY - canvas.getBoundingClientRect().top;
-            drawing = true;
+            ctx.moveTo(
+                touch.clientX - canvas.getBoundingClientRect().left,
+                touch.clientY - canvas.getBoundingClientRect().top
+            );
+            isDrawing = true;
             saveState();
         });
 
         canvas.addEventListener('touchmove', (e) => {
-            if (!drawing) return;
+            if (!isDrawing) return;
             e.preventDefault();
-
             const touch = e.touches[0];
-            ctx.lineWidth = isErasing ? 10 : 2;
-            ctx.lineJoin = 'round';
-            ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
-            ctx.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : currentColor; // Fix the erasing mode issue
-
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
+            const rect = canvas.getBoundingClientRect();
             ctx.lineTo(
-                touch.clientX - canvas.getBoundingClientRect().left,
-                touch.clientY - canvas.getBoundingClientRect().top
+                touch.clientX - rect.left,
+                touch.clientY - rect.top
             );
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = isErasing ? 10 : 2;
             ctx.stroke();
-
-            lastX = touch.clientX - canvas.getBoundingClientRect().left;
-            lastY = touch.clientY - canvas.getBoundingClientRect().top;
             hasDrawn = true;
         });
 
         canvas.addEventListener('touchend', () => {
-            drawing = false;
+            isDrawing = false;
             ctx.beginPath();
         });
-
-        // Toggle eraser
-        const eraserButton = document.getElementById('eraserButton');
-        eraserButton.addEventListener('click', () => {
-            isErasing = !isErasing;
-            eraserButton.textContent = isErasing ? 'Switch to Drawing' : 'Toggle Eraser';
-        });
-        
-        // Handle color changes
-        const colorPicker = document.getElementById('colorPicker');
-        colorPicker.addEventListener('input', (e) => {
-            currentColor = e.target.value; // Update the current color
-        });
-
-        // Save doodle only if content exists
-        function saveDoodle() {
-            const doodleInput = document.getElementById('doodleInput');
-            if (!hasDrawn) {
-                doodleInput.value = ''; // Don't save blank data
-                return;
-            }
-            doodleInput.value = canvas.toDataURL('image/png', 0.5);
-        }
-
-        // Validate note
-        function validateNote() {
-            const noteInput = document.getElementById('noteInput');
-            if (noteInput.value.trim() === '') {
-                alert('Please enter a note before submitting.');
-                return false;
-            }
-            saveDoodle();
-            return true;
-        }
-        
     }
 });
+
+// Make validateNote globally accessible
+function validateNote() {
+    const noteInput = document.getElementById('noteInput');
+    const doodleInput = document.getElementById('doodleInput');
+    const canvas = document.getElementById('drawingCanvas');
+
+    // Check if note input is empty
+    if (noteInput.value.trim() === '') {
+        alert('Please enter a note before submitting.');
+        return false;
+    }
+
+    // Save doodle data if canvas exists
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx.getImageData(0, 0, canvas.width, canvas.height).data.some((pixel) => pixel !== 255)) {
+            doodleInput.value = canvas.toDataURL('image/png', 0.5);
+        }
+    }
+    return true;
+}
