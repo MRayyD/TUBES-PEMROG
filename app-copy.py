@@ -107,7 +107,7 @@ class Note:
             return cursor.fetchall()
 
     @staticmethod
-    def create(content, user_id, notebook_id, doodle):
+    def create(content, user_id, notebook_id, doodle=None):
         db = get_db()
         with db.cursor() as cursor:
             cursor.execute(
@@ -241,11 +241,10 @@ def add_note():
 
     user_id = session['user_id']
     notebook_name = request.form.get('notebook_name')
-    title = request.form.get('title')
     content = request.form.get('note')
     doodle = request.form.get('doodle')
 
-    if not notebook_name or not content or not title:
+    if not notebook_name or not content:
         flash('Notebook name, title, and note content are required.', 'error')
         return redirect(url_for('write_notebook'))
 
@@ -274,6 +273,7 @@ def add_note():
         # Add the note
         Note.create(content, user_id, notebook_id, doodle)
         flash('Note and notebook added successfully!', 'success')
+
     except Exception as e:
         app.logger.error(f"Error saving note: {e}")
         flash('Failed to add note. Please try again.', 'error')

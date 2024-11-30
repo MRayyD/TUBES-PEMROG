@@ -137,14 +137,15 @@
         <a href="{{ url_for('write_notebook') }}">Write a Note</a>
         <a href="{{ url_for('list_notebook') }}">Note List</a>
     </div>
-    <form action="{{ url_for('add_note') }}" method="POST" onsubmit="return validateNote();">
+    
+    <form action="{{ url_for('add_note') }}" method="POST">
         <div class="row">
             <div class="side">
                 <h2>Your Note</h2>
                 <div class="container">
                     <label for="notebookName">Notebook</label>
-                    <input type="text" id="notebookName" name="notebook_name" placeholder="Enter notebook name...">
-                    <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..."></textarea>
+                    <input type="text" id="notebookName" name="notebook_name" placeholder="Enter notebook name..." required>
+                    <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..." required></textarea>
                     <button type="submit">Add Note</button>
                 </div>
             </div>
@@ -163,7 +164,6 @@
             </div>
         </div>
     </form>
-    
     <script src="{{ url_for('static', filename='wnscript.js') }}"> </script>
 </body>
 </html>

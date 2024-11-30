@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     const canvas = document.getElementById('drawingCanvas');
+    const doodleInput = document.getElementById('doodleInput');
     const editor = document.getElementById('editor');
     const undoButton = document.getElementById('undoButton');
     const toggleCanvas = document.getElementById('toggleCanvas');
@@ -59,42 +60,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (isDrawing) {
             const rect = canvas.getBoundingClientRect();
             ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
-            ctx.strokeStyle = isErasing ? 'white' : currentColor; // Use white for erasing
-            ctx.lineWidth = isErasing ? 10 : 2; // Thicker stroke for eraser
+            ctx.strokeStyle = isErasing ? 'white' : currentColor;
+            ctx.lineWidth = isErasing ? 10 : 2;
             ctx.stroke();
         } else {
             ctx.beginPath();
         }
     });
 
-    // Handle touch events for mobile
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        ctx.moveTo(
-            touch.clientX - canvas.getBoundingClientRect().left,
-            touch.clientY - canvas.getBoundingClientRect().top
-        );
-        isDrawing = true;
-        saveState();
-    });
-
-    canvas.addEventListener('touchmove', (e) => {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const touch = e.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        ctx.lineTo(
-            touch.clientX - rect.left,
-            touch.clientY - rect.top
-        );
-        ctx.strokeStyle = isErasing ? 'white' : currentColor; // Use white for erasing
-        ctx.lineWidth = isErasing ? 10 : 2; // Thicker stroke for eraser
-        ctx.stroke();
-    });
-
-    canvas.addEventListener('touchend', () => {
-        isDrawing = false;
-        ctx.beginPath();
+    // Save canvas content to hidden input before form submission
+    document.querySelector('form').addEventListener('submit', () => {
+        doodleInput.value = canvas.toDataURL('image/png'); // Convert canvas to Base64
     });
 });
