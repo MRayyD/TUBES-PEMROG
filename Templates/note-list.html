@@ -125,7 +125,7 @@
           <li class="menu-item">
             {{ note.content }}
             {% if note.doodle %}
-            <img src="{{ note.doodle }}" alt="Doodle Image" style="max-width: 100px; max-height: 100px;">
+            <img src="{{ note.doodle }}" alt="Doodle Image" style="max-width: 300px;">
             {% endif %}
             <a href="{{ url_for('delete_note', note_id=note.id) }}">
               <i class="fa-solid fa-trash"></i> <!-- Trash icon -->
