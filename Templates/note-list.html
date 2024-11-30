@@ -119,16 +119,16 @@
   <!-- Vertical Menu -->
   <div class="vertical-menu">
     <h2>Notes</h2>
-    <ul>
+    <ul id="notes-list">
       {% if notes %}
         {% for note in notes %}
-          <li class="menu-item">
+          <li class="menu-item" data-note-id="{{ note.id }}">
             {{ note.content }}
             {% if note.doodle %}
             <img src="{{ note.doodle }}" alt="Doodle Image" style="max-width: 300px;">
             {% endif %}
             <a href="{{ url_for('delete_note', note_id=note.id) }}">
-              <i class="fa-solid fa-trash"></i> <!-- Trash icon -->
+              <i class="fa-solid fa-trash"></i>
             </a>
           </li>
         {% endfor %}
@@ -137,6 +137,27 @@
       {% endif %}
     </ul>
 
+    <!-- Collaborative Section -->
+    <div class="collaborative-section">
+      <h2>Real-Time Collaborative Notes</h2>
+      <div id="collaborative-notes-list"></div>
+      
+      <!-- Notebook Rooms Management -->
+      <h3>Notebook Rooms</h3>
+      <div id="notebook-rooms">
+        {% if notebooks %}
+          {% for notebook in notebooks %}
+            <div class="menu-item" data-notebook-id="{{ notebook.id }}">
+              <span>{{ notebook.title }}</span>
+              <button onclick="joinNotebookRoom({{ notebook.id }})">Join Room</button>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p>No notebooks available for collaborative rooms.</p>
+        {% endif %}
+      </div>
+    </div>
+
     <h2>Your Notebooks</h2>
     <ul>
       {% if notebooks %}
@@ -144,7 +165,7 @@
           <li class="menu-item">
             <a href="{{ url_for('list_notebook', notebook_id=notebook.id) }}">{{ notebook.title }}</a>
             <a href="{{ url_for('delete_notebook', notebook_id=notebook.id) }}">
-              <i class="fa-solid fa-trash"></i> <!-- Trash icon -->
+              <i class="fa-solid fa-trash"></i>
             </a>
           </li>
         {% endfor %}
@@ -153,5 +174,60 @@
       {% endif %}
     </ul>
   </div>
+  <!-- SocketIO Integration -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const socket = io();
+    const collaborativeNotesList = document.getElementById('collaborative-notes-list');
+
+    // Join Notebook Room Function
+    window.joinNotebookRoom = function(notebookId) {
+      socket.emit('join_notebook', { notebook_id: notebookId });
+      alert(`Joined notebook room ${notebookId}`);
+    };
+
+    // Listen for notebook notes when joining a room
+    socket.on('notebook_notes', (data) => {
+      // Clear previous collaborative notes
+      collaborativeNotesList.innerHTML = '';
+      
+      // Populate with existing notes
+      data.notes.forEach(note => {
+        const noteElement = document.createElement('div');
+        noteElement.className = 'real-time-note';
+        noteElement.dataset.noteId = note.id;
+        noteElement.innerHTML = `
+          <strong>Notebook Note:</strong> ${note.content}
+          ${note.doodle ? `<img src="${note.doodle}" alt="Doodle" style="max-width: 200px;">` : ''}
+        `;
+        collaborativeNotesList.appendChild(noteElement);
+      });
+    });
+
+    // Listen for new collaborative notes
+    socket.on('new_note', (data) => {
+      const noteElement = document.createElement('div');
+      noteElement.className = 'real-time-note';
+      noteElement.dataset.noteId = data.note.id;
+      noteElement.innerHTML = `
+        <strong>New Collaborative Note:</strong> ${data.note.content}
+        ${data.note.doodle ? `<img src="${data.note.doodle}" alt="Doodle" style="max-width: 200px;">` : ''}
+      `;
+      collaborativeNotesList.prepend(noteElement);
+    });
+
+    // Listen for note updates
+    socket.on('note_updated', (data) => {
+      const existingNote = document.querySelector(`[data-note-id="${data.note_id}"]`);
+      if (existingNote) {
+        existingNote.innerHTML = `
+          <strong>Updated Note:</strong> ${data.content}
+          ${data.doodle ? `<img src="${data.doodle}" alt="Doodle" style="max-width: 200px;">` : ''}
+        `;
+      }
+    });
+  });
+  </script>
 </body>
 </html>

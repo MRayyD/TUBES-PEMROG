@@ -117,6 +117,23 @@
         .fa-eraser:hover, .fa-undo:hover, .fa-save:hover {
             color: white;
         }
+        .collaborative-section {
+            background-color: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+          }
+          
+          .real-time-note {
+            background-color: #e0e0e0;
+            margin: 5px 0;
+            padding: 10px;
+            border-left: 4px solid #ffca1a;
+          }
+          
+          #collaborative-notes-list {
+            max-height: 300px;
+            overflow-y: auto;
+          }
     </style>
 </head>
 <body>
@@ -138,15 +155,22 @@
         <a href="{{ url_for('list_notebook') }}">Note List</a>
     </div>
     
-    <form action="{{ url_for('add_note') }}" method="POST">
+    <form action="{{ url_for('add_note') }}" method="POST" id="noteForm">
         <div class="row">
             <div class="side">
                 <h2>Your Note</h2>
                 <div class="container">
                     <label for="notebookName">Notebook</label>
-                    <input type="text" id="notebookName" name="notebook_name" placeholder="Enter notebook name..." required>
+                    <select id="notebookName" name="notebook_name" required>
+                        <option value="">Select a Notebook</option>
+                        {% for notebook in notebooks %}
+                            <option value="{{ notebook.title }}">{{ notebook.title }}</option>
+                        {% endfor %}
+                    </select>
                     <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..." required></textarea>
-                    <button type="submit">Add Note</button>
+                    
+                    <!-- New Collaborative Note Button -->
+                    <button type="button" id="collaborativeNoteBtn">Add Collaborative Note</button>
                 </div>
             </div>
             <div class="main">
@@ -165,5 +189,50 @@
         </div>
     </form>
     <script src="{{ url_for('static', filename='wnscript.js') }}"> </script>
+    <!-- SocketIO Integration Script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const socket = io();
+        const noteForm = document.getElementById('noteForm');
+        const collaborativeNoteBtn = document.getElementById('collaborativeNoteBtn');
+
+        // Join Notebook Room Function
+        window.joinNotebookRoom = function(notebookId) {
+            socket.emit('join_notebook', { notebook_id: notebookId });
+            alert(`Joined notebook room ${notebookId}`);
+        };
+
+        // Collaborative Note Creation
+        collaborativeNoteBtn.addEventListener('click', () => {
+            const notebookName = document.getElementById('notebookName').value;
+            const noteContent = document.getElementById('noteInput').value;
+            const doodleInput = document.getElementById('doodleInput').value;
+
+            if (!notebookName || !noteContent) {
+                alert('Please select a notebook and enter note content');
+                return;
+            }
+
+            // Emit collaborative note creation
+            socket.emit('create_collaborative_note', {
+                notebook_id: document.querySelector(`option[value="${notebookName}"]`).closest('select').selectedOptions[0].getAttribute('data-notebook-id'),
+                content: noteContent,
+                doodle: doodleInput
+            });
+        });
+
+        // Listen for new notes
+        socket.on('new_note', (data) => {
+            alert('New collaborative note added!');
+            console.log('New Note:', data.note);
+        });
+
+        // Optional: Handle note updates
+        socket.on('note_updated', (data) => {
+            console.log('Note Updated:', data);
+        });
+    });
+    </script>
 </body>
 </html>
