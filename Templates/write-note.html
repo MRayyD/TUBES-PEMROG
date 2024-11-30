@@ -161,16 +161,21 @@
                 <h2>Your Note</h2>
                 <div class="container">
                     <label for="notebookName">Notebook</label>
-                    <select id="notebookName" name="notebook_name" required>
-                        <option value="">Select a Notebook</option>
-                        {% for notebook in notebooks %}
-                            <option value="{{ notebook.title }}">{{ notebook.title }}</option>
-                        {% endfor %}
-                    </select>
+                    <input type="text" id="notebookName" name="notebook_name" placeholder="Enter notebook name" required>
                     <textarea class="textnote" id="noteInput" name="note" placeholder="Add a new note..." required></textarea>
                     
                     <!-- New Collaborative Note Button -->
                     <button type="button" id="collaborativeNoteBtn">Add Collaborative Note</button>
+
+                    <div id="notebook-rooms">
+                        <h3>Your Notebooks</h3>
+                        {% for notebook in notebooks %}
+                            <div class="room-item" data-notebook-id="{{ notebook.id }}">
+                                {{ notebook.title }}
+                                <button type="button" class="join-room-btn" onclick="joinNotebookRoom({{ notebook.id }})">Join Room</button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             <div class="main">
