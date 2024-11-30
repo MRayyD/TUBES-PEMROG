@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let isDrawing = false;
     let isErasing = false; // Default mode: Drawing
     let currentColor = 'black';
+    let hasDrawn = false; // New variable to track drawing state
 
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -55,7 +56,9 @@ document.addEventListener('DOMContentLoaded', function () {
         isDrawing = true;
         saveState();
     });
+
     canvas.addEventListener('mouseup', () => (isDrawing = false));
+
     canvas.addEventListener('mousemove', (event) => {
         if (isDrawing) {
             const rect = canvas.getBoundingClientRect();
@@ -63,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ctx.strokeStyle = isErasing ? 'white' : currentColor;
             ctx.lineWidth = isErasing ? 10 : 2;
             ctx.stroke();
+            hasDrawn = true; // Set to true when drawing occurs
         } else {
             ctx.beginPath();
         }
@@ -70,6 +74,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Save canvas content to hidden input before form submission
     document.querySelector('form').addEventListener('submit', () => {
-        doodleInput.value = canvas.toDataURL('image/png'); // Convert canvas to Base64
+        if (hasDrawn) {
+            doodleInput.value = canvas.toDataURL('image/png'); // Convert canvas to Base64
+        } else {
+            doodleInput.value = ''; // Send empty data if nothing is drawn
+        }
     });
 });
