@@ -107,7 +107,7 @@ class Note:
             return cursor.fetchall()
 
     @staticmethod
-    def create(content, user_id, notebook_id, doodle=None):
+    def create(content, user_id, notebook_id, doodle):
         db = get_db()
         with db.cursor() as cursor:
             cursor.execute(
@@ -279,7 +279,6 @@ def add_note():
         flash('Failed to add note. Please try again.', 'error')
 
     return redirect(url_for('list_notebook'))
-
 
 
 @app.route('/delete_note/<int:note_id>')

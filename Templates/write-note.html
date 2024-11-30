@@ -108,13 +108,13 @@
             justify-content: space-between;
             align-items: center;
         }
-        .fa-pencil-alt, .fa-undo {
+        .fa-eraser, .fa-undo {
             font-size: 24px;
             color: #333;
             margin-right: 10px;
             cursor: pointer;
         }
-        .fa-pencil-alt:hover, .fa-undo:hover, .fa-save:hover {
+        .fa-eraser:hover, .fa-undo:hover, .fa-save:hover {
             color: white;
         }
     </style>
@@ -153,12 +153,12 @@
                 <div class="main-header">
                     <h2>Main Content</h2>
                     <div>
-                        <i class="fa-solid fa-pencil-alt" id="toggleCanvas"></i>
+                        <i class="fa-solid fa-eraser" id="toggleCanvas"></i>
                         <i class="fa-solid fa-undo" id="undoButton"></i>
                     </div>
                 </div>
                 <div id="editor">
-                    <textarea class="doodlenote" id="main_content" placeholder="Place your content here..."></textarea>
+                    <canvas id="drawingCanvas" style="border: 1px solid #000;"></canvas>
                 </div>
             </div>
         </div>
